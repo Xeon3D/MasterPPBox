@@ -6,127 +6,118 @@
 
 ---
 
-86Box-Next2
+MasterPPBox
 ===========
 
-**86Box-Next2 is a fork of [86Box](https://github.com/86Box/86Box)**, the low level x86 emulator for IBM PC systems and compatibles from 1981 to the PCI era. It is merged with upstream 86Box every week. Everything 86Box does, this does too; below is what it adds.
+**MasterPPBox is a fork of [86Box](https://github.com/86Box/86Box) (by way of
+[86Box-Next2](https://github.com/Xeon3D/86Box-Next2)) that runs untouched disk
+images of Midway's TouchMaster II countertop cabinets (FreeBSD 3.2, 2000–2001)
+on their own hardware: an Intel BL440ZX board with its on-board ATI Rage Pro
+Turbo AGP, a Celeron, the on-board Ensoniq ES1373, Midway's Dolphin I/O board
+and a MicroTouch touchscreen.**
 
-Windows x64 builds are on the [releases page](https://github.com/Xeon3D/86Box-Next2/releases). They are static: one `86Box-Next2.exe` and one `isp-server.exe`, no DLLs. The ROMs are not included: use the [86Box ROM set](https://github.com/86Box/roms). The NVIDIA BIOSes are not in it; they are in [Xeon3D/roms](https://github.com/Xeon3D/roms) (`roms/video/nvidia/nv3` and `nv4`), which is the 86Box set plus those.
+The game checks its hardware, and the emulated hardware answers:
 
-**86Box-Next2** is the continuation of [Xeon3D/86Box-Next](https://github.com/Xeon3D/86Box-Next): upstream 86Box retired its old dynamic recompiler, and so does this fork. Only the new recompiler remains; 86Box-Next keeps the last builds with the old one.
+- **The Dolphin I/O board** (ISA, D0000h), with its AT88SC153 U9 chip and the
+  Abyss key. The game's protection reads both. MasterPPBox emulates the board
+  and the chips, including their Answer-To-Reset, so `diag`'s Dolphin I/O Test
+  passes. It programs them as the game's own factory flow would, from
+  **Tools → TouchMaster Key Generator**: a serial number, one of the game's 54
+  countries, and a key version.
+- **The ATI Rage Pro Turbo AGP** (1002:4742), which Midway's display server
+  `dl` drives from user space, with the 2D engine, the 3D front-end scaler
+  (sprites, fades, masking) and the VLINE interrupt. The BL440ZX's own BIOS
+  supplies the chip's video BIOS and puts it at I/O D800h, and the ES1373 at
+  EF00h: the two addresses Midway's kernel hard-codes.
+- **Coins and buttons:** the Dolphin's electronic coin lines, TEST and
+  Calibrate, from the I/O Board menu and the toolbar.
 
-**[NEXT-ADDITIONS.md](NEXT-ADDITIONS.md)** lists every addition over upstream 86Box in one table, with its status (working, partly working, experimental) and its known bugs.
+No byte of the game is patched. Both releases run: **2.03** (the OEM field
+release) and **3.0x** (the ALPHA10 development build).
 
-Extra features
---------------
+Credit
+------
 
-### NVIDIA graphics cards
-* **RIVA 128 and RIVA 128 ZX** (NV3), PCI and AGP:
-  * 2D acceleration, DirectDraw and Direct3D with NVIDIA's own Windows drivers;
-  * the video overlay (YUY2/UYVY, scaled, colour-keyed) used by video players;
-  * VGA, VESA and NVIDIA's extended modes up to 1600x1200, and the RAMDAC's checksum, so NVIDIA's manufacturing test passes.
-* **RIVA TNT, TNT2 and TNT2 Ultra** (NV4/NV5), PCI and AGP, with 18 boards' own BIOSes as the card's Model: ELSA ERAZOR II/III/III Pro/III LT/III ULTRA and Synergy II-32, Diamond Viper V550/V770, Creative Graphics Blaster RIVA TNT, STB Velocity 4400, ASUS AGP-V3400TNT and Leadtek WinFast 3D S320 II:
-  * 2D acceleration up to 1600x1200 in 32-bit colour;
-  * Direct3D (DirectX 5 and 6 triangles, multitexturing) and the **OpenGL ICD**: 3DMark 99 and 2000, Unreal Tournament and Quake III Arena run on NVIDIA's Windows 98 driver;
-  * the 3D is drawn on worker threads (1 to 8), or on the **host's GPU** through Vulkan ("Draw 3D on the host GPU" in the card's settings), with the same pixels either way.
+**All credit for the emulator itself belongs to the 86Box project and its
+authors** (see [AUTHORS](AUTHORS)). MasterPPBox adds a little TouchMaster
+hardware on top of their work. Sibling of
+[PeepeeBox](https://github.com/Xeon3D/PeepeeBox) (funworld Photo Play) and
+[MegaPPBox](https://github.com/Xeon3D/MegaPPBox) (Merit Megatouch).
 
-#### RIVA TNT / TNT2: what has been tested
+Released under the GNU General Public License version 2 or later, the same as
+86Box. See [COPYING](COPYING). The ROMs in [roms/](roms/) belong to their
+owners (Intel, ATI); see [roms/LICENSE](roms/LICENSE).
 
-Guests ran on Pentium II-class machines (ASUS P6BAP, Celeron 233-266, or a Pentium 233 on Socket 7 for the PCI cards). Benchmark figures are the guest's own (its emulated CPU sets them), not host speed.
+Running it (Windows)
+--------------------
 
-| OS | NVIDIA driver | Cards | Works | Does not work / not tested |
-|---|---|---|---|---|
-| Windows 98 SE | 4.11.01.0115 (reference, 1999) | TNT, TNT2 (not Ultra/M64: the driver does not list them) | 2D up to 1600x1200x32; DirectDraw and its overlay; Direct3D: DxDiag, **3DMark 99 MAX 2620**, **3DMark 2000 1050**, Unreal Tournament demo; OpenGL: **Quake III Arena** (39 fps timedemo), **GLQuake 85 fps**, **Quake II 38.5 fps** | Alt+Tab out of a fullscreen OpenGL game and back crashes the driver (its own 1999 bug, as far as we can tell) |
-| Windows 98 SE | 8.05 | TNT, TNT2, TNT2 Ultra, TNT2 M64 | 2D, Direct3D (**3DMark 99: 2714 Ultra, 2717 M64**), overlay and DVD subpicture: Media Player plays MPEG-1 and Indeo 4/5 through the overlay in real time | |
-| Windows 98 SE | 71.84 (2005) | TNT, TNT2 Ultra | Desktop, resolution and colour-depth changes, DirectDraw | **Direct3D draws nothing**: the driver's TNT path never sets up a 3D colour/depth buffer (found by disassembling it), and real TNT2s fail 3DMark 99/2000 with it too ([VOGONS](https://www.vogons.org/viewtopic.php?t=28336)). Use 8.05 or older |
-| Windows 98 SE | 45.23 (2003) | TNT2 (45.23 does not list the original TNT) | Desktop at 8/16/32 bpp, colour-depth and resolution changes, DirectDraw, Direct3D 8 (DxDiag), **3DMark 99 MAX 2679**, OpenGL: **GLQuake 55.6 fps** (likely vsync-capped) | Direct3D 6/7 needs a working AGP GART driver: on the VIA boards install VIA's 4in1 AGP driver (VIAGART), or 3DMark 99 reports no texturing accelerator and DxDiag's D3D7 test fails at step 8, as on real VIA boards |
-| Windows 98 SE | Detonator 2.08 (July 1999) | TNT | 2D, **3DMark 99 MAX 2792**, **GLQuake 85.9 fps** | |
-| Windows 98 SE | ASUS 1.02 (December 1998) | ASUS V3400TNT | 2D, **3DMark 99 MAX 2805**, **GLQuake 85.9 fps** | |
-| Windows 2000 | built-in NVIDIA driver | TNT (PCI) | 1024x768x32 desktop, overlay, Media Player MPEG-1, restart | 3D not tested |
-| Windows 2000 | 71.84 | TNT2 (PCI) | Installs, desktop | 3D not tested |
-| Windows NT 4.0 SP6a | 28.32, 43.45 | TNT (AGP) | 800x600x16 and 1024x768x32 desktops, mode change without reboot, OpenGL (3D Pipes), DirectDraw overlay | Direct3D: NT4 has none |
-| DOS | card BIOS (VBE 3.0) | all 18 boards POST; tested in depth: ERAZOR II PCI on a Socket 7 board (Intel TC430HX, Pentium 200) | Text and VGA modes; SciTech VBETest: banked and linear framebuffer, double buffering, virtual-screen scrolling (640x480 and 1600x1200, 16-bit); **Quake 1.01 and 1.06** in every VESA mode from 320x200 to 1280x1024, **timedemo 22 fps at 640x480** | Most boards' BIOSes report a fixed amount of memory to VESA programs, as on the real cards (NVIDIA's reference BIOS hard-codes it): ELSA TNT 8 MB, ELSA TNT2 / Creative / ASUS / Leadtek 4 MB, STB / Diamond V770 16 MB; the Diamond V550 reports what is fitted |
-| Linux | XFree86 `nv`, `rivafb` | | | Not tested |
+### What you need
 
-Not emulated: the TV encoders and video capture (PME), the DirectX 3 triangle class (0x48), 3D drawn into a swizzled surface. Nothing found so far needs them.
+- **A TouchMaster II hard disk image**: the disk of a real cabinet, copied into
+  a file. MasterPPBox does not come with any.
+- **A Windows x64 PC.**
 
-Tip: with the **shareware** Quake data GLQuake shows the desktop instead of the game in fullscreen. That is GLQuake, not the card: it cannot read back its palette cache with shareware data, regenerates it behind a dialog on every start, and minimizes itself when that dialog takes the focus. Use the full game's PAK0/PAK1 or `-window`.
+### Step 1: Download and unzip
 
-### Dial-up, telephone lines and voice calls
-* **Modems on COM ports:** Diamond SupraExpress 56e PRO and ELSA MicroLink 56k, with a status bar icon to change the line while the machine runs. The line can be:
-  * not connected;
-  * a TCP host;
-  * isp-server's telephone network.
-* **isp-server**, a virtual ISP that runs as a program of its own:
-  * dial any number and you get PPP and NAT to the host's Internet;
-  * guests on it can reach each other;
-  * port forwarding;
-  * an optional modem-speed throttle;
-  * a status page in the browser, where you can hang up calls and change settings;
-  * on Windows, a log window that minimizes to the notification area (no console window).
-  * real accounts with PAP, CHAP-MD5, MS-CHAP, MS-CHAP-2 and CHAP-SHA1 to SHA3-512, MPPE encryption, MPPC/Deflate/BSD-Compress/Predictor-1 compression, WINS and Multilink;
-  * a status page in tabs (status, phone, port forwards, settings, log, users) with logins for hosting it;
-  * Linux, macOS and Docker (`xeon3d/86box-next-isp`) builds too: it has its own repository, [Xeon3D/ISP-Server](https://github.com/Xeon3D/ISP-Server) (here as the `isp-server` submodule: clone with `--recurse-submodules`).
-* **Telephone numbers:** every VM's modem gets a number on isp-server's exchange, and VMs can call each other.
-  * A call rings the other modem, with caller ID; ATA or auto-answer picks it up, and the two modems connect byte for byte.
-  * BUSY and NO ANSWER work as on a real line.
-  * Any other number reaches the ISP.
-* **Voice calls:**
-  * Two voice command sets:
-    * Rockwell's, which Windows 9x's Unimodem/V and vgetty use.
-    * The ITU's V.253.
-  * Playing and recording are supported, including Rockwell ADPCM that matches Rockwell's own encoder bit for bit.
-  * Other supported features:
-    * DTMF;
-    * busy and silence detection;
-    * full duplex.
-  * Every modem also has a **phone beside it**, which is the host's microphone and speakers. Pick it up from the modem menu to answer, call a number, or join the guest's call.
-  * isp-server's page has a **phone** of its own, so you can call a VM from the browser.
+From the [latest release](https://github.com/Xeon3D/MasterPPBox/releases/latest),
+download `MasterPPBox-windows-x64.zip` and extract it. Keep the folder together.
 
-### PC Cards (PCMCIA)
-* A Cirrus CL-PD6722 controller with two sockets, and cards you can insert and remove while the machine runs, from a PC Card icon in the status bar.
-* Cards:
-  * 3Com 3C589D Ethernet;
-  * TRENDnet TE100-PC16 Fast Ethernet;
-  * 3Com 3C562D LAN + 33.6 modem (a multi-function card);
-  * Adaptec APA-1460 SlimSCSI.
+| In the folder | What it is |
+|---|---|
+| `MasterPPBox.exe` | The emulator |
+| `roms\` | BL440ZX BIOS and the Rage Pro / Rage IIC video BIOSes |
+| `TouchMaster-2.03-OEM\` | The 2.03 cabinet: settings, CMOS, keyed Dolphin chips (serial 100922889, Canada) |
+| `TouchMaster-3.0x-ALPHA10\` | The 3.0x cabinet: settings, CMOS, keyed Dolphin chips (serial 60000922889, USA DBV, key 3.0) |
+| `Run TouchMaster 2.03 (OEM).cmd`, `Run TouchMaster 3.0x (ALPHA10).cmd` | Start a cabinet |
 
-### USB
-* VIA and Intel USB 1.1 (UHCI) and USB 2.0 (EHCI) controllers.
-* Host device passthrough (libusb, or UsbDk on Windows), including isochronous transfers such as USB audio.
-* A connect prompt, a USB menu and an activity trace.
+### Step 2: Add your disk image
 
-### Sound
-* **Roland Sound Canvas** MIDI output: the boards of [88emu](https://github.com/dsp56300/gearmulator) (SC-55, SC-55mkII, SC-88, SC-88VL, SC-88Pro, SC-8820, SC-8850 and their relatives, the MT-32s and the CM-32L/CM-32P/CM-64), running their own firmware.
-  * Its Configure window lists the synthesizers and, for the selected one, every ROM image it needs, with its MD5 checksum and a green lamp for each one found in `roms/soundcanvas` (any file name: known dumps are recognized by their contents) and a red one for each one missing.
-  * While the machine runs, the synthesizer's front panel opens in a window of its own: the display, the lamps, the buttons (mouse or keyboard) and the volume knob all work. The piano icon at the left of the status bar brings it back.
+**Make a copy of your image first:** the game writes its settings, audits and
+scores onto it.
 
-### Input and arcade
-* Elo TouchSystems SmartSet serial touchscreen.
-* Arcade I/O boards: funworld Photo Play and Merit Megatouch XL/MAXX.
+The cabinets expect the disk trimmed to the size of its FreeBSD slice,
+16841664 sectors (8622931968 bytes, 16708 cylinders × 16 heads × 63 sectors).
+The rest of a field disk is empty. Make it with
+[TouchMaster/scripts/p3-mkdisk.py](TouchMaster/scripts/p3-mkdisk.py), which
+checks that the dropped tail really is empty:
 
-### Other
-* Every setting lives in the machine's own `86box.cfg`; there is no global configuration.
-* The VM Manager is optional and off by default.
-* A new icon set.
-* The release (or build number) in the title bar.
-* Static Windows builds.
-* A debug command file (`BOX86NEXT_DEBUG_CMD`) to drive a running machine from scripts: keys, screenshots, breakpoints, memory and device state.
+```
+python -I p3-mkdisk.py <your-image> tm-oem.img 16841664
+```
 
-Licensing
----------
+Name it `tm-oem.img` (2.03) or `tm-alpha10.img` (3.0x) and put it in the
+cabinet's folder, next to its `86box.cfg`.
 
-86Box-Next2, like 86Box, is released under the [GNU General Public License, version 2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) or later. For more information, see the `COPYING` file in the root of the repository.
+### Step 3: Play
 
-The Roland Sound Canvas device includes 88emu from [gearmulator](https://github.com/dsp56300/gearmulator), which is released under the [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0.html); builds that include it are therefore distributed under GPLv3.
+Double-click the cabinet's `Run … .cmd`. It boots to the game's menus in
+about a minute.
 
-The emulator can also optionally make use of [FluidSynth](https://www.fluidsynth.org/), [Ghostscript](https://www.ghostscript.com/) and [Discord Game SDK](https://discord.com/developers/docs/game-sdk/sdk-starter-guide), which are distributed under their respective licenses.
+- **The mouse is your finger**: click on the screen to touch it.
+- **Coins, TEST and Calibrate** are in the I/O Board menu and on the toolbar.
+- **Other keys:** Tools → TouchMaster Key Generator writes new Dolphin chips
+  for another serial or country. A country different from the one in the
+  game's settings makes it restore its factory settings.
 
-Credits
--------
+What's here
+-----------
 
-* **86Box and its developers** wrote the emulator this is built on: [86Box/86Box](https://github.com/86Box/86Box).
-* The COM port modems, the Elo touchscreen and the funworld I/O board come from PeepeeBox.
-* The PC Card controller and the Megatouch board come from MegaPPBox.
-* The Roland Sound Canvas emulation and its front-panel artwork are 88emu's, by The Usual Suspects ([gearmulator](https://github.com/dsp56300/gearmulator)), building on nukeykt's [Nuked-SC55](https://github.com/nukeykt/Nuked-SC55) and [munt](https://github.com/munt/munt).
-* The Rockwell ADPCM coder is a port of Peter Jaeckel's fixed-point version in [mgetty/vgetty](https://github.com/Distrotech/mgetty) (GPL).
+| Path | |
+|---|---|
+| `src/` | The emulator: 86Box-Next2 plus the TouchMaster hardware (`src/device/dolphin_io.c`, `at88sc153.c`, `dolphin_keygen.c`; `src/video/vid_ati_mach64*.c`, the Rage IIC and Rage Pro; the BL440ZX's on-board video in `src/machine/`) |
+| `rigs/` | The two cabinets' folders as in the release (without the emulator, ROMs and images) |
+| `roms/` | The ROMs the cabinets need |
+| `TouchMaster/` | The reverse-engineering work: [TouchMaster.md](TouchMaster/TouchMaster.md) (overview), [Docs/](TouchMaster/Docs/) (one document per phase, 00–10), [scripts/](TouchMaster/scripts/) (every tool used, reproducible) |
+
+The research covers the boot chain, the Dolphin protection (fully documented
+and re-implemented), the platform's hardware, video, coins and sound, the
+3.0x build, the key generator, and why the hardware is a BL440ZX with a Rage
+Pro Turbo ([Docs/10](TouchMaster/Docs/10-bl440zx-ragepro.md)). The extracted
+game files, the disk images and Midway's binaries are not included.
+
+Building
+--------
+
+As 86Box: CMake with Qt 6 (see [doc/](doc/) and `.github/workflows/`). The
+release's Windows build is MSYS2 UCRT64, static (`-DSTATIC_BUILD=ON`), with
+`-DAUTOMATION=OFF -DGDBSTUB=OFF`.
